@@ -1,8 +1,8 @@
 import { LibMedia } from "../libmedia/libmedia.js";
 import { LibMidi, createUnlockingAudioContext } from "../libmidi/libmidi.js";
-import { codeMap, KeyRepeatManager } from "./key.js";
-import { EventQueue } from "./eventqueue.js";
-import { initKbdListeners, setKbdHandler, kbdWidth, kbdHeight } from "./screenKbd.js";
+import { codeMap, KeyRepeatManager } from "./key.js?v=2";
+import { EventQueue } from "./eventqueue.js?v=2";
+import { initKbdListeners, setKbdHandler, kbdWidth, kbdHeight } from "./screenKbd.js?v=2";
 
 // we need to import natives here, don't use System.loadLibrary
 // since CheerpJ fails to load them in firefox and we can't set breakpoints
@@ -20,6 +20,14 @@ const cheerpjWebRoot = '/app'+location.pathname.replace(/\/[^/]*$/,'');
 
 let isMobile = sp.get('mobile');
 
+function mouseControlsEnabled() {
+    let stored = null;
+    try { stored = localStorage.getItem('hvcd.mouseControls'); } catch (e) {}
+    if (stored === '1') return true;
+    if (stored === '0') return false;
+    return !isMobile;
+}
+
 let display = null;
 let screenCtx = null;
 
@@ -36,9 +44,13 @@ function autoscale() {
     let screenWidth = window.innerWidth;
     let screenHeight = window.innerHeight;
 
+    const leftKeys = document.getElementById('left-keys');
+    const rightKeys = document.getElementById('right-keys');
+    const showMouseKbd = !isMobile && mouseControlsEnabled();
+
     if (isMobile) {
-        document.getElementById('left-keys').style.display = '';
-        document.getElementById('right-keys').style.display = '';
+        leftKeys.style.display = '';
+        rightKeys.style.display = '';
 
         if (screenWidth > screenHeight) {
             document.body.classList.add('kbd-landscape');
@@ -49,6 +61,15 @@ function autoscale() {
             document.body.classList.remove('kbd-landscape');
             screenHeight = screenHeight - kbdHeight;
         }
+    } else if (showMouseKbd) {
+        leftKeys.style.display = '';
+        rightKeys.style.display = '';
+        document.body.classList.remove('kbd-portrait', 'kbd-landscape');
+        screenHeight = screenHeight - kbdHeight;
+    } else {
+        leftKeys.style.display = 'none';
+        rightKeys.style.display = 'none';
+        document.body.classList.remove('kbd-portrait', 'kbd-landscape');
     }
 
     let scale = Math.min(
@@ -61,6 +82,34 @@ function autoscale() {
     }
 
     display.style.zoom = scale;
+}
+
+function initMouseToggle() {
+    const toggle = document.getElementById('mouse-toggle');
+    if (!toggle) return;
+
+    if (isMobile) {
+        toggle.style.display = 'none';
+        document.body.classList.remove('mouse-controls');
+        return;
+    }
+
+    const update = () => {
+        const on = mouseControlsEnabled();
+        document.body.classList.toggle('mouse-controls', on);
+        toggle.classList.toggle('on', on);
+        toggle.textContent = on ? '🖱 Chuột: BẬT' : '🖱 Chuột: TẮT';
+    };
+
+    toggle.addEventListener('click', () => {
+        const next = !mouseControlsEnabled();
+        try { localStorage.setItem('hvcd.mouseControls', next ? '1' : '0'); } catch (e) {}
+        update();
+        autoscale();
+        if (display) display.focus();
+    });
+
+    update();
 }
 
 function setListeners() {
@@ -238,6 +287,7 @@ async function init() {
     screenCtx = display.getContext('2d');
 
     setListeners();
+    initMouseToggle();
 
     window.libmidi = new LibMidi(createUnlockingAudioContext());
     await window.libmidi.init();

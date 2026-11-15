@@ -86,6 +86,37 @@ function handleTouchEnd(e) {
     }
 }
 
+// Mouse support (desktop): press and hold the on-screen keys.
+let mouseKey = null;
+let mouseDown = false;
+
+function handleMouseDown(e) {
+    if (e.button !== 0) return;
+    const key = getKeyAtPoint(e.clientX, e.clientY);
+    if (!key) return;
+    e.preventDefault();
+    mouseDown = true;
+    mouseKey = key;
+    activateKey(key);
+}
+
+function handleMouseMove(e) {
+    if (!mouseDown) return;
+    const key = getKeyAtPoint(e.clientX, e.clientY);
+    if (key !== mouseKey) {
+        deactivateKey(mouseKey);
+        mouseKey = key;
+        if (key) activateKey(key);
+    }
+}
+
+function handleMouseUp() {
+    if (!mouseDown) return;
+    mouseDown = false;
+    deactivateKey(mouseKey);
+    mouseKey = null;
+}
+
 export function initKbdListeners() {
     // Add touch event listeners to keypad areas
     const keypads = document.querySelectorAll('.keypad-part');
@@ -94,7 +125,12 @@ export function initKbdListeners() {
         keypad.addEventListener('touchmove', handleTouchMove, { passive: false });
         keypad.addEventListener('touchend', handleTouchEnd, { passive: false });
         keypad.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+        keypad.addEventListener('mousedown', handleMouseDown);
     });
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('blur', handleMouseUp);
 }
 
 export function setKbdHandler(handler) {
