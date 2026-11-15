@@ -1,8 +1,8 @@
 import { LibMedia } from "../libmedia/libmedia.js";
 import { LibMidi, createUnlockingAudioContext } from "../libmidi/libmidi.js";
-import { codeMap, KeyRepeatManager } from "./key.js?v=3";
-import { EventQueue } from "./eventqueue.js?v=3";
-import { initKbdListeners, setKbdHandler, kbdWidth, kbdHeight } from "./screenKbd.js?v=3";
+import { codeMap, KeyRepeatManager } from "./key.js?v=4";
+import { EventQueue } from "./eventqueue.js?v=4";
+import { initKbdListeners, setKbdHandler, kbdWidth, kbdHeight } from "./screenKbd.js?v=4";
 
 // we need to import natives here, don't use System.loadLibrary
 // since CheerpJ fails to load them in firefox and we can't set breakpoints
@@ -146,12 +146,12 @@ function gestureDir(dx, dy) {
 }
 
 /*
-The MIDlet has no pointer support at all, so mouse gestures on the game screen
+The MIDlet has no pointer support at all, so mouse buttons on the game screen
 are translated into the keypad events the game does understand:
-  click            -> Enter (OK)
-  drag             -> Arrow key (held, so the game keeps repeating)
-  right click      -> Escape (back)
-  wheel up / down  -> ArrowUp / ArrowDown
+  left button        -> Enter (attack / OK / select)
+  right button drag  -> Arrow key (held, so the game keeps repeating)
+  middle button      -> Escape (back)
+  wheel up / down    -> ArrowUp / ArrowDown
 */
 function initMouseGestures() {
     if (isMobile) return;
@@ -164,7 +164,7 @@ function initMouseGestures() {
         setTimeout(() => keyUp(code), 60);
     };
 
-    let dragging = false;
+    let moving = false;
     let held = null;
     let moved = false;
     let startX = 0;
@@ -180,19 +180,28 @@ function initMouseGestures() {
     }
 
     display.addEventListener('mousedown', e => {
-        if (!active() || e.button !== 0) return;
+        if (!active()) return;
         e.preventDefault();
         e.stopPropagation();
         display.focus();
-        dragging = true;
-        moved = false;
-        startX = e.clientX;
-        startY = e.clientY;
-        releaseHeld();
+
+        if (e.button === 0) {
+            // Left button: attack / select. Fire on press so it feels responsive.
+            tap('Enter');
+        } else if (e.button === 1) {
+            tap('Escape');
+        } else if (e.button === 2) {
+            // Right button: movement, direction comes from the drag.
+            moving = true;
+            moved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            releaseHeld();
+        }
     }, true);
 
     window.addEventListener('mousemove', e => {
-        if (!dragging) return;
+        if (!moving) return;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
         if (!moved && Math.hypot(dx, dy) > GESTURE_DEADZONE) moved = true;
@@ -206,19 +215,15 @@ function initMouseGestures() {
         }
     });
 
-    window.addEventListener('mouseup', () => {
-        if (!dragging) return;
-        dragging = false;
-        if (held) {
-            releaseHeld();
-        } else if (!moved) {
-            tap('Enter');
-        }
+    window.addEventListener('mouseup', e => {
+        if (!moving || e.button !== 2) return;
+        moving = false;
+        releaseHeld();
         moved = false;
     });
 
     window.addEventListener('blur', () => {
-        dragging = false;
+        moving = false;
         releaseHeld();
     });
 
@@ -226,7 +231,6 @@ function initMouseGestures() {
         if (!active()) return;
         e.preventDefault();
         e.stopPropagation();
-        tap('Escape');
     }, true);
 
     display.addEventListener('wheel', e => {
