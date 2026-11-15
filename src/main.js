@@ -1,8 +1,7 @@
 import { LibMedia } from "../libmedia/libmedia.js";
 import { LibMidi, createUnlockingAudioContext } from "../libmidi/libmidi.js";
-import { codeMap, KeyRepeatManager } from "./key.js?v=4";
-import { EventQueue } from "./eventqueue.js?v=4";
-import { initKbdListeners, setKbdHandler, kbdWidth, kbdHeight } from "./screenKbd.js?v=4";
+import { codeMap, KeyRepeatManager } from "./key.js?v=6";
+import { EventQueue } from "./eventqueue.js?v=6";
 
 // we need to import natives here, don't use System.loadLibrary
 // since CheerpJ fails to load them in firefox and we can't set breakpoints
@@ -18,16 +17,6 @@ const sp = new URLSearchParams(location.search);
 
 const cheerpjWebRoot = '/app'+location.pathname.replace(/\/[^/]*$/,'');
 
-let isMobile = sp.get('mobile');
-
-function mouseControlsEnabled() {
-    let stored = null;
-    try { stored = localStorage.getItem('hvcd.mouseControls'); } catch (e) {}
-    if (stored === '1') return true;
-    if (stored === '0') return false;
-    return !isMobile;
-}
-
 let display = null;
 let screenCtx = null;
 
@@ -41,43 +30,12 @@ window.evtQueue = evtQueue;
 function autoscale() {
     if (!scaleSet) return;
 
-    let screenWidth = window.innerWidth;
-    let screenHeight = window.innerHeight;
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
 
-    const leftKeys = document.getElementById('left-keys');
-    const rightKeys = document.getElementById('right-keys');
-    const mouseMode = !isMobile && mouseControlsEnabled();
-
-    document.body.classList.toggle('mouse-mode', mouseMode);
-    document.body.classList.toggle('kbd-mouse', !isMobile && !mouseMode);
-
-    if (mouseMode && !hintShownOnce) {
+    if (!hintShownOnce) {
         hintShownOnce = true;
         showMouseHint();
-    }
-
-    if (isMobile) {
-        leftKeys.style.display = '';
-        rightKeys.style.display = '';
-
-        if (screenWidth > screenHeight) {
-            document.body.classList.add('kbd-landscape');
-            document.body.classList.remove('kbd-portrait');
-            screenWidth = screenWidth - 2*kbdWidth;
-        } else {
-            document.body.classList.add('kbd-portrait');
-            document.body.classList.remove('kbd-landscape');
-            screenHeight = screenHeight - kbdHeight;
-        }
-    } else if (!mouseMode) {
-        leftKeys.style.display = '';
-        rightKeys.style.display = '';
-        document.body.classList.remove('kbd-portrait', 'kbd-landscape');
-        screenHeight = screenHeight - kbdHeight;
-    } else {
-        leftKeys.style.display = 'none';
-        rightKeys.style.display = 'none';
-        document.body.classList.remove('kbd-portrait', 'kbd-landscape');
     }
 
     let scale = Math.min(
@@ -97,44 +55,10 @@ let hintShownOnce = false;
 
 function showMouseHint() {
     const hint = document.getElementById('mouse-hint');
-    if (!hint || isMobile) return;
+    if (!hint) return;
     hint.classList.add('show');
     clearTimeout(hintTimer);
     hintTimer = setTimeout(() => hint.classList.remove('show'), 6000);
-}
-
-function initMouseToggle() {
-    const toggle = document.getElementById('mouse-toggle');
-    if (!toggle) return;
-
-    if (isMobile) {
-        toggle.style.display = 'none';
-        document.body.classList.remove('mouse-mode', 'kbd-mouse');
-        return;
-    }
-
-    const update = () => {
-        const on = mouseControlsEnabled();
-        document.body.classList.toggle('mouse-mode', on);
-        document.body.classList.toggle('kbd-mouse', !on);
-        toggle.classList.toggle('on', on);
-        toggle.textContent = on ? '🖱 Chuột: BẬT' : '⌨ Phím ảo';
-        toggle.title = on
-            ? 'Đang điều khiển bằng chuột trên màn hình — bấm để chuyển sang bàn phím ảo'
-            : 'Đang hiện bàn phím ảo — bấm để điều khiển bằng chuột';
-    };
-
-    toggle.addEventListener('click', () => {
-        const next = !mouseControlsEnabled();
-        try { localStorage.setItem('hvcd.mouseControls', next ? '1' : '0'); } catch (e) {}
-        update();
-        autoscale();
-        if (next) showMouseHint();
-        if (display) display.focus();
-    });
-
-    update();
-    if (mouseControlsEnabled()) showMouseHint();
 }
 
 const GESTURE_DEADZONE = 16;
@@ -146,16 +70,14 @@ function gestureDir(dx, dy) {
 }
 
 /*
-The MIDlet has no pointer support at all, so mouse buttons on the game screen
-are translated into the keypad events the game does understand:
-  left button        -> Enter (attack / OK / select)
-  right button drag  -> Arrow key (held, so the game keeps repeating)
-  middle button      -> Escape (back)
-  wheel up / down    -> ArrowUp / ArrowDown
+The MIDlet has no pointer support at all, so pointer input on the game screen
+is translated into the keypad events the game does understand:
+  left button / tap        -> Enter (attack / OK / select)
+  right button drag / swipe-> Arrow key (held, so the game keeps repeating)
+  middle button / 2 fingers-> Escape (back)
+  wheel up / down          -> ArrowUp / ArrowDown
 */
 function initMouseGestures() {
-    if (isMobile) return;
-
     const args = { symbol: '\x00', ctrlKey: false, shiftKey: false };
     const keyDown = code => keyRepeatManager.post(true, code, args);
     const keyUp = code => keyRepeatManager.post(false, code, args);
@@ -170,8 +92,6 @@ function initMouseGestures() {
     let startX = 0;
     let startY = 0;
 
-    const active = () => mouseControlsEnabled();
-
     function releaseHeld() {
         if (held) {
             keyUp(held);
@@ -179,8 +99,8 @@ function initMouseGestures() {
         }
     }
 
+    // Mouse
     display.addEventListener('mousedown', e => {
-        if (!active()) return;
         e.preventDefault();
         e.stopPropagation();
         display.focus();
@@ -228,27 +148,88 @@ function initMouseGestures() {
     });
 
     display.addEventListener('contextmenu', e => {
-        if (!active()) return;
         e.preventDefault();
         e.stopPropagation();
     }, true);
 
     display.addEventListener('wheel', e => {
-        if (!active()) return;
         e.preventDefault();
         e.stopPropagation();
         tap(e.deltaY > 0 ? 'ArrowDown' : 'ArrowUp');
     }, { capture: true, passive: false });
+
+    // Touch: same gestures, so the game stays playable without any keypad.
+    let touchId = null;
+    let touchMoved = false;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartT = 0;
+
+    display.addEventListener('touchstart', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        display.focus();
+
+        if (e.touches.length >= 2) {
+            releaseHeld();
+            touchId = null;
+            tap('Escape');
+            return;
+        }
+
+        const t = e.changedTouches[0];
+        touchId = t.identifier;
+        touchMoved = false;
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchStartT = performance.now();
+        releaseHeld();
+    }, { capture: true, passive: false });
+
+    display.addEventListener('touchmove', e => {
+        if (touchId === null) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const t = Array.from(e.touches).find(x => x.identifier === touchId);
+        if (!t) return;
+
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        if (!touchMoved && Math.hypot(dx, dy) > GESTURE_DEADZONE) touchMoved = true;
+        const next = touchMoved ? gestureDir(dx, dy) : null;
+        if (next !== held) {
+            releaseHeld();
+            if (next) {
+                keyDown(next);
+                held = next;
+            }
+        }
+    }, { capture: true, passive: false });
+
+    function endTouch(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (touchId === null) return;
+        const t = Array.from(e.changedTouches).find(x => x.identifier === touchId);
+        if (!t) return;
+
+        if (held) {
+            releaseHeld();
+        } else if (!touchMoved && performance.now() - touchStartT < 700) {
+            tap('Enter');
+        }
+        touchId = null;
+        touchMoved = false;
+    }
+
+    display.addEventListener('touchend', endTouch, { capture: true, passive: false });
+    display.addEventListener('touchcancel', endTouch, { capture: true, passive: false });
 }
 
 function setListeners() {
     let mouseDown = false;
     let noMouse = false;
-
-    setKbdHandler((isDown, key) => {
-        const symbol = key.startsWith('Digit') ? key.substring(5) : '\x00';
-        keyRepeatManager.post(isDown, key, {symbol, ctrlKey: false, shiftKey: false});
-    });
 
     function handleKeyEvent(e) {
         const isDown = e.type === 'keydown';
@@ -377,8 +358,6 @@ function setListeners() {
     });
 
     window.addEventListener('resize', autoscale);
-
-    initKbdListeners();
 }
 
 function setFaviconFromBuffer(arrayBuffer) {
@@ -415,7 +394,6 @@ async function init() {
     display = document.getElementById('display');
     screenCtx = display.getContext('2d');
 
-    initMouseToggle();
     initMouseGestures();
     setListeners();
 

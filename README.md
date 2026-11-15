@@ -39,9 +39,9 @@ Lưu ý:
 
 ## Điều khiển
 
-### Chuột (mặc định trên máy tính)
+Không có bàn phím ảo — thao tác trực tiếp trên màn hình game.
 
-Thao tác trực tiếp trên màn hình game — không cần bàn phím ảo:
+### Chuột (máy tính)
 
 | Thao tác | Chức năng |
 |---|---|
@@ -50,8 +50,13 @@ Thao tác trực tiếp trên màn hình game — không cần bàn phím ảo:
 | Lăn chuột | Lên / xuống |
 | Chuột giữa | Quay lại (Esc) |
 
-Nút **🖱 Chuột: BẬT** ở góc trên phải để chuyển sang **⌨ Phím ảo** (bàn phím
-số + mũi tên) khi cần nhập số. Lựa chọn được ghi nhớ trong `localStorage`.
+### Cảm ứng (điện thoại, máy tính bảng)
+
+| Thao tác | Chức năng |
+|---|---|
+| Chạm | Đánh / chọn / OK |
+| Vuốt (giữ ngón tay) | Đi theo hướng vuốt, giữ lâu để đi liên tục |
+| Chạm 2 ngón | Quay lại (Esc) |
 
 ### Bàn phím
 
@@ -62,9 +67,6 @@ số + mũi tên) khi cần nhập số. Lựa chọn được ghi nhớ trong `
 | `F1` | Phím mềm trái |
 | `F2` | Phím mềm phải |
 | `Esc` | Menu cài đặt của emulator |
-
-Trên điện thoại, thêm `?mobile=1` (trang chủ tự phát hiện thiết bị cảm ứng)
-để hiện bàn phím ảo.
 
 ## Cấu trúc
 
