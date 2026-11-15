@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hoa Văn Cương Đạo — Chơi trên web</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 30%, #2b3a55 0%, #121722 70%);
+    color: #e8eefc; font-family: system-ui, "Segoe UI", sans-serif;
+  }
+  .card { text-align: center; padding: 32px; }
+  h1 { font-size: clamp(22px, 5vw, 40px); margin: 0 0 8px; letter-spacing: 1px; }
+  p { color: #9fb0cc; margin: 0 0 28px; font-size: 15px; }
+  a.play {
+    display: inline-block; padding: 14px 44px; border-radius: 10px;
+    background: linear-gradient(180deg, #4f8cff, #2f66d8);
+    color: #fff; font-size: 18px; font-weight: 600; text-decoration: none;
+    box-shadow: 0 8px 24px rgba(47, 102, 216, .45);
+    transition: transform .1s ease, box-shadow .1s ease;
+  }
+  a.play:active { transform: scale(.97); box-shadow: 0 4px 12px rgba(47, 102, 216, .45); }
+  .hint { margin-top: 26px; font-size: 13px; color: #7d8daa; line-height: 1.6; }
+  kbd {
+    background: #1d2636; border: 1px solid #35425a; border-radius: 4px;
+    padding: 1px 6px; font-size: 12px; color: #c8d6f0;
+  }
+  .alt { margin-top: 18px; font-size: 12px; }
+  .alt a { color: #6f9bff; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hoa Văn Cương Đạo</h1>
+    <p>Game J2ME chạy trực tiếp trong trình duyệt</p>
+    <a class="play" id="play" href="run.html?app=hvcd">▶ Chơi ngay</a>
+    <div class="hint">
+      Phím điều khiển: <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd>,
+      <kbd>Enter</kbd> = OK, <kbd>F1</kbd>/<kbd>F2</kbd> = phím mềm trái/phải,
+      <kbd>Esc</kbd> = menu cài đặt.<br>
+      Trên điện thoại, trang sẽ tự hiện bàn phím cảm ứng.
+    </div>
+    <div class="alt"><a href="launcher.html">Cài thêm game khác</a></div>
+  </div>
+  <script>
+    var mobile = window.matchMedia('(pointer: coarse)').matches ||
+                 /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    var url = 'run.html?app=hvcd' + (mobile ? '&mobile=1' : '');
+    document.getElementById('play').href = url;
+  </script>
+</body>
+</html>
