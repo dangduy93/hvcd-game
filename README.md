@@ -39,6 +39,22 @@ Lưu ý:
 
 ## Điều khiển
 
+### Chuột (mặc định trên máy tính)
+
+Thao tác trực tiếp trên màn hình game — không cần bàn phím ảo:
+
+| Thao tác | Chức năng |
+|---|---|
+| Bấm chuột trái | OK / chọn / qua hội thoại |
+| Kéo (giữ và di chuyển) | Đi theo hướng kéo (↑ ↓ ← →), giữ lâu để đi liên tục |
+| Lăn chuột | Lên / xuống |
+| Chuột phải | Quay lại (Esc) |
+
+Nút **🖱 Chuột: BẬT** ở góc trên phải để chuyển sang **⌨ Phím ảo** (bàn phím
+số + mũi tên) khi cần nhập số. Lựa chọn được ghi nhớ trong `localStorage`.
+
+### Bàn phím
+
 | Phím | Chức năng |
 |---|---|
 | `↑` `↓` `←` `→` | Di chuyển |

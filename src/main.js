@@ -1,8 +1,8 @@
 import { LibMedia } from "../libmedia/libmedia.js";
 import { LibMidi, createUnlockingAudioContext } from "../libmidi/libmidi.js";
-import { codeMap, KeyRepeatManager } from "./key.js?v=2";
-import { EventQueue } from "./eventqueue.js?v=2";
-import { initKbdListeners, setKbdHandler, kbdWidth, kbdHeight } from "./screenKbd.js?v=2";
+import { codeMap, KeyRepeatManager } from "./key.js?v=3";
+import { EventQueue } from "./eventqueue.js?v=3";
+import { initKbdListeners, setKbdHandler, kbdWidth, kbdHeight } from "./screenKbd.js?v=3";
 
 // we need to import natives here, don't use System.loadLibrary
 // since CheerpJ fails to load them in firefox and we can't set breakpoints
@@ -46,7 +46,15 @@ function autoscale() {
 
     const leftKeys = document.getElementById('left-keys');
     const rightKeys = document.getElementById('right-keys');
-    const showMouseKbd = !isMobile && mouseControlsEnabled();
+    const mouseMode = !isMobile && mouseControlsEnabled();
+
+    document.body.classList.toggle('mouse-mode', mouseMode);
+    document.body.classList.toggle('kbd-mouse', !isMobile && !mouseMode);
+
+    if (mouseMode && !hintShownOnce) {
+        hintShownOnce = true;
+        showMouseHint();
+    }
 
     if (isMobile) {
         leftKeys.style.display = '';
@@ -61,7 +69,7 @@ function autoscale() {
             document.body.classList.remove('kbd-landscape');
             screenHeight = screenHeight - kbdHeight;
         }
-    } else if (showMouseKbd) {
+    } else if (!mouseMode) {
         leftKeys.style.display = '';
         rightKeys.style.display = '';
         document.body.classList.remove('kbd-portrait', 'kbd-landscape');
@@ -84,21 +92,36 @@ function autoscale() {
     display.style.zoom = scale;
 }
 
+let hintTimer = null;
+let hintShownOnce = false;
+
+function showMouseHint() {
+    const hint = document.getElementById('mouse-hint');
+    if (!hint || isMobile) return;
+    hint.classList.add('show');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => hint.classList.remove('show'), 6000);
+}
+
 function initMouseToggle() {
     const toggle = document.getElementById('mouse-toggle');
     if (!toggle) return;
 
     if (isMobile) {
         toggle.style.display = 'none';
-        document.body.classList.remove('mouse-controls');
+        document.body.classList.remove('mouse-mode', 'kbd-mouse');
         return;
     }
 
     const update = () => {
         const on = mouseControlsEnabled();
-        document.body.classList.toggle('mouse-controls', on);
+        document.body.classList.toggle('mouse-mode', on);
+        document.body.classList.toggle('kbd-mouse', !on);
         toggle.classList.toggle('on', on);
-        toggle.textContent = on ? '🖱 Chuột: BẬT' : '🖱 Chuột: TẮT';
+        toggle.textContent = on ? '🖱 Chuột: BẬT' : '⌨ Phím ảo';
+        toggle.title = on
+            ? 'Đang điều khiển bằng chuột trên màn hình — bấm để chuyển sang bàn phím ảo'
+            : 'Đang hiện bàn phím ảo — bấm để điều khiển bằng chuột';
     };
 
     toggle.addEventListener('click', () => {
@@ -106,10 +129,112 @@ function initMouseToggle() {
         try { localStorage.setItem('hvcd.mouseControls', next ? '1' : '0'); } catch (e) {}
         update();
         autoscale();
+        if (next) showMouseHint();
         if (display) display.focus();
     });
 
     update();
+    if (mouseControlsEnabled()) showMouseHint();
+}
+
+const GESTURE_DEADZONE = 16;
+
+function gestureDir(dx, dy) {
+    if (Math.abs(dx) < GESTURE_DEADZONE && Math.abs(dy) < GESTURE_DEADZONE) return null;
+    if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 'ArrowRight' : 'ArrowLeft';
+    return dy > 0 ? 'ArrowDown' : 'ArrowUp';
+}
+
+/*
+The MIDlet has no pointer support at all, so mouse gestures on the game screen
+are translated into the keypad events the game does understand:
+  click            -> Enter (OK)
+  drag             -> Arrow key (held, so the game keeps repeating)
+  right click      -> Escape (back)
+  wheel up / down  -> ArrowUp / ArrowDown
+*/
+function initMouseGestures() {
+    if (isMobile) return;
+
+    const args = { symbol: '\x00', ctrlKey: false, shiftKey: false };
+    const keyDown = code => keyRepeatManager.post(true, code, args);
+    const keyUp = code => keyRepeatManager.post(false, code, args);
+    const tap = code => {
+        keyDown(code);
+        setTimeout(() => keyUp(code), 60);
+    };
+
+    let dragging = false;
+    let held = null;
+    let moved = false;
+    let startX = 0;
+    let startY = 0;
+
+    const active = () => mouseControlsEnabled();
+
+    function releaseHeld() {
+        if (held) {
+            keyUp(held);
+            held = null;
+        }
+    }
+
+    display.addEventListener('mousedown', e => {
+        if (!active() || e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        display.focus();
+        dragging = true;
+        moved = false;
+        startX = e.clientX;
+        startY = e.clientY;
+        releaseHeld();
+    }, true);
+
+    window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!moved && Math.hypot(dx, dy) > GESTURE_DEADZONE) moved = true;
+        const next = moved ? gestureDir(dx, dy) : null;
+        if (next !== held) {
+            releaseHeld();
+            if (next) {
+                keyDown(next);
+                held = next;
+            }
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        if (held) {
+            releaseHeld();
+        } else if (!moved) {
+            tap('Enter');
+        }
+        moved = false;
+    });
+
+    window.addEventListener('blur', () => {
+        dragging = false;
+        releaseHeld();
+    });
+
+    display.addEventListener('contextmenu', e => {
+        if (!active()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        tap('Escape');
+    }, true);
+
+    display.addEventListener('wheel', e => {
+        if (!active()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        tap(e.deltaY > 0 ? 'ArrowDown' : 'ArrowUp');
+    }, { capture: true, passive: false });
 }
 
 function setListeners() {
@@ -286,8 +411,9 @@ async function init() {
     display = document.getElementById('display');
     screenCtx = display.getContext('2d');
 
-    setListeners();
     initMouseToggle();
+    initMouseGestures();
+    setListeners();
 
     window.libmidi = new LibMidi(createUnlockingAudioContext());
     await window.libmidi.init();

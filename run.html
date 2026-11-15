@@ -184,7 +184,7 @@
         right: 220px;
     }
 
-    /* Mouse controls: compact keypads in the bottom corners. */
+    /* Mouse controls */
     #mouse-toggle {
         position: fixed;
         top: 10px;
@@ -205,21 +205,55 @@
         color: #fff;
     }
 
-    body.mouse-controls #left-keys,
-    body.mouse-controls #right-keys {
+    /* Keypad mode on desktop (fallback, reached from the toggle button). */
+    body.kbd-mouse #left-keys,
+    body.kbd-mouse #right-keys {
         display: flex;
         width: 200px;
         height: 200px;
         bottom: 8px;
         z-index: 900;
     }
-    body.mouse-controls #left-keys { left: 8px; }
-    body.mouse-controls #right-keys { right: 8px; }
-    body.mouse-controls #screen-area { bottom: 216px; }
+    body.kbd-mouse #left-keys { left: 8px; }
+    body.kbd-mouse #right-keys { right: 8px; }
+    body.kbd-mouse #screen-area { bottom: 216px; }
+
+    /* Mouse mode: the game screen itself is the controller. */
+    body.mouse-mode #display {
+        cursor: pointer;
+        touch-action: none;
+    }
+
+    #mouse-hint {
+        position: fixed;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        z-index: 1000;
+        display: flex;
+        gap: 12px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(24, 30, 44, .86);
+        color: #dbe6ff;
+        font: 13px system-ui, sans-serif;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity .25s ease;
+    }
+    #mouse-hint.show { opacity: 1; }
+    #mouse-hint b { color: #fff; font-weight: 600; }
 
 </style>
 <body>
     <button id="mouse-toggle" type="button" tabindex="-1" title="Bật/tắt điều khiển bằng chuột">🖱 Chuột</button>
+    <div id="mouse-hint" aria-hidden="true">
+        <span><b>Bấm</b> chọn</span>
+        <span><b>Kéo</b> di chuyển</span>
+        <span><b>Chuột phải</b> quay lại</span>
+        <span><b>Lăn</b> lên/xuống</span>
+    </div>
     <div id="screen-area">
         <canvas tabindex="0" id="display" style="display: none;"></canvas>
         <div id="loading">Loading...</div>
@@ -254,6 +288,6 @@
         </div>
     </div>
     <script src="https://cjrtnc.leaningtech.com/20260317_2978/loader.js"></script>
-    <script type="module" src="src/main.js?v=2"></script>
+    <script type="module" src="src/main.js?v=3"></script>
 </body>
 </html>
